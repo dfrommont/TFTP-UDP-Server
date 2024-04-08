@@ -43,7 +43,6 @@ public class UDPSocketServer extends Thread {
                         String fileName = request.substring(4); // Remove "GET:" prefix
 
                         // Read requested file
-                        File file = new File(fileName);
                         FileInputStream fileInputStream = new FileInputStream("./files/" + fileName);
                         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -68,7 +67,7 @@ public class UDPSocketServer extends Thread {
 
                         // Process acknowledgment
                         String ackMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                        System.out.println("Server acknowledgment: " + ackMessage);
+                        System.out.println("Client acknowledgment: " + ackMessage);
                     } catch (Exception error) {
                         System.err.println(error);
                     }
