@@ -5,17 +5,6 @@ import java.net.*;
 
 public class UDPSocketServer extends Thread {
     private static final int MAX_PACKET_SIZE = 10000; // Maximum size of UDP packet
-    protected DatagramSocket socket;
-
-    public UDPSocketServer() throws SocketException {
-        this("UDPSocketServer");
-    }
-
-    public UDPSocketServer(String name) throws SocketException {
-        super(name);
-        socket = new DatagramSocket(9000);
-
-    }
 
     @Override public void run() {
         DatagramSocket serverSocket = null;
@@ -63,11 +52,11 @@ public class UDPSocketServer extends Thread {
 
                         receiveData = new byte[MAX_PACKET_SIZE];
                         receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                        socket.receive(receivePacket);
+                        serverSocket.receive(receivePacket);
 
                         // Process acknowledgment
                         String ackMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                        System.out.println("Client acknowledgment: " + ackMessage);
+                        System.out.println(serverSocket.getInetAddress() + " acknowledgment: " + ackMessage);
                     } catch (Exception error) {
                         System.err.println(error);
                     }
@@ -85,11 +74,11 @@ public class UDPSocketServer extends Thread {
                         fileOutputStream.write(dataPacket.getData(), 0, dataPacket.getLength());
 
                         // Send acknowledgment to client
-                        String ackMessage = "File received successfully";
+                        String ackMessage = fileName + " received successfully";
                         sendData = ackMessage.getBytes();
                         DatagramPacket ackPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
                         serverSocket.send(ackPacket);
-                        System.out.println("Server has successfully received the file: " + fileName);
+                        System.out.println("Server has successfully received the file: " + fileName + " from " + ackPacket.getAddress() + " (Client)");
                     } catch(Exception error) {
                         System.err.println(error);
                     }
