@@ -4,77 +4,58 @@ import java.io.*;
 import java.net.*;
 
 public class UDPSocketServer extends Thread {
-    private static final int MAX_PACKET_SIZE = 10000; // Maximum size of UDP packet
+    private static final int MAX_PACKET_SIZE = 10000; //Max size of file
 
     @Override public void run() {
-        DatagramSocket serverSocket = null;
+        DatagramSocket socket = null;
 
         try {
-            // Create a UDP socket
-            serverSocket = new DatagramSocket(1234);
-
-            byte[] receivedData = new byte[MAX_PACKET_SIZE];
+            socket = new DatagramSocket(1234); //Open a socket on port 1234 (same as client)
 
             while (true) {
-                DatagramPacket receivedPacket = new DatagramPacket(receivedData, MAX_PACKET_SIZE);
-                serverSocket.receive(receivedPacket);
+                byte[] receivedData = new byte[MAX_PACKET_SIZE];
+                DatagramPacket received = new DatagramPacket(receivedData, MAX_PACKET_SIZE);
+                socket.receive(received); //Copy a received packet into a byte array
 
-                InetAddress clientAddress = receivedPacket.getAddress();
-                int clientPort = receivedPacket.getPort();
+                InetAddress address = received.getAddress();
+                int port = received.getPort();
 
-                // Extract client's request (file name or file data)
-                String request = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
+                String request = new String(received.getData(), 0, received.getLength()); //Pull request from data
 
-                if (request.startsWith("GET ")) {
+                if (request.startsWith("GET ")) { //Client has requested file
                     try {
-                        // Request to retrieve file by name
-                        String fileName = request.substring(4); // Remove "GET:" prefix
+                        String file_name = request.substring(4); //Extract name from data
 
-                        // Read requested file
-                        FileInputStream fileInputStream = new FileInputStream("./files/" + fileName);
-                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        File file = new File("./files/" + file_name);
+                        FileInputStream fileInputStream = new FileInputStream(file);
+                        byte[] fileData = new byte[(int) file.length()];
+                        fileInputStream.read(fileData);
+                        fileInputStream.close(); //Convert file in 'files/' to a byte array if it can be found
 
-                        byte[] buffer = new byte[1024];
-                        int bytesRead;
+                        DatagramPacket sent = new DatagramPacket(fileData, fileData.length, address, port);
+                        socket.send(sent); //Send file to client
 
-                        // Read file into buffer
-                        while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-                            byteArrayOutputStream.write(buffer, 0, bytesRead);
-                        }
+                        received = new DatagramPacket(receivedData, receivedData.length);
+                        socket.receive(received); //Receive acknowledgement from client
 
-                        // Get file data
-                        byte[] fileData = byteArrayOutputStream.toByteArray();
-
-                        // Send file data back to client
-                        DatagramPacket sendPacket = new DatagramPacket(fileData, fileData.length, clientAddress, clientPort);
-                        serverSocket.send(sendPacket);
-
-                        receivedPacket = new DatagramPacket(receivedData, receivedData.length);
-                        serverSocket.receive(receivedPacket);
-
-                        // Process acknowledgment
-                        String ackMessage = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
-                        System.out.println(serverSocket.getInetAddress() + " acknowledgment: " + ackMessage);
+                        String ackMessage = new String(received.getData(), 0, received.getLength());
+                        System.out.println(socket.getInetAddress() + " acknowledgment: " + ackMessage); //Output acknowledgement on Server
                     } catch (Exception error) {
                         System.err.println(error);
                     }
-                } else if (request.startsWith("PUT ")) {
+                } else if (request.startsWith("PUT ")) { //User has sent Server a file
                     try {
-                        // Request to receive file data from client
-                        String fileName = request.substring(4); // Remove "PUT:" prefix
+                        String fileName = request.substring(4); //Extract name from request
 
-                        // Receive file data from client
                         DatagramPacket dataPacket = new DatagramPacket(receivedData, receivedData.length);
-                        serverSocket.receive(new DatagramPacket(receivedData, receivedData.length));
+                        socket.receive(new DatagramPacket(receivedData, receivedData.length)); //Receive file from Client
 
-                        // Write received file data to file
-                        new FileOutputStream("./files/" + fileName).write(dataPacket.getData(), 0, dataPacket.getLength());
+                        new FileOutputStream("./files/" + fileName).write(dataPacket.getData(), 0, dataPacket.getLength()); //Write data to new file
 
-                        // Send acknowledgment to client
                         String ackMessage = fileName + " received successfully";
                         byte[] sendData = ackMessage.getBytes();
-                        DatagramPacket ackPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
-                        serverSocket.send(ackPacket);
+                        DatagramPacket ackPacket = new DatagramPacket(sendData, sendData.length, address, port);
+                        socket.send(ackPacket); //Sent client acknowledgement
                         System.out.println("Server has successfully received the file: " + fileName + " from " + ackPacket.getAddress() + " (Client)");
                     } catch(Exception error) {
                         System.err.println(error);
@@ -84,11 +65,11 @@ public class UDPSocketServer extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        serverSocket.close();
+        if (socket != null) socket.close();
     }
 
     public static void main(String[] args) {
-        System.out.println("Server started");
-        new UDPSocketServer().start();
+        System.out.println("UDP Server");
+        new UDPSocketServer().start(); //Call the server
     }
 }
