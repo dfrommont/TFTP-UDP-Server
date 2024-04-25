@@ -97,17 +97,6 @@ public class UDPSocketServer extends Thread {
         requestBuffer.getShort();
 
         File file = new File("./files/" + fileName);
-        if (file.exists()) {
-            ByteBuffer errorBuffer = ByteBuffer.allocate(5 + "File already exists".length() + 1);
-            errorBuffer.putShort((short) 5);
-            errorBuffer.putShort((short) 6); //Error opcode
-            errorBuffer.put("File already exists".getBytes());
-            errorBuffer.put((byte) 0); //Generate error package if the file being sent already exists
-
-            DatagramPacket errorPacket = new DatagramPacket(errorBuffer.array(), errorBuffer.position(), socketAddress);
-            socket.send(errorPacket); //Package the error into a packet and send this to the Client
-            return;
-        }
 
         FileOutputStream fileOutputStream = new FileOutputStream(file); //Open a FileOutputStream on the file
 
@@ -119,28 +108,12 @@ public class UDPSocketServer extends Thread {
             ByteBuffer dataBuffer = ByteBuffer.wrap(dataPacket.getData()); //Convert this back to a byteBuffer
             short opcode = dataBuffer.getShort();
             if (opcode != 3) {
-                ByteBuffer errorBuffer = ByteBuffer.allocate(5 + "Unexpected opcode".length() + 1);
-                errorBuffer.putShort((short) 5); // Error opcode
-                errorBuffer.putShort((short) 4);
-                errorBuffer.put("Unexpected opcode".getBytes());
-                errorBuffer.put((byte) 0); //Generate error if the opcode is not 3 - DATA opcode
-
-                DatagramPacket errorPacket = new DatagramPacket(errorBuffer.array(), errorBuffer.position(), socketAddress);
-                socket.send(errorPacket); //Package this error into a packet and send back to Client
-                return;
+                return; //Stop reading if packet is not a data packet (opcode 3)
             }
 
             int receivedBlockNumber = dataBuffer.getShort();
             if (receivedBlockNumber != blockNumber + 1) {
-                ByteBuffer errorBuffer = ByteBuffer.allocate(5 + "Unexpected opcode".length() + 1);
-                errorBuffer.putShort((short) 5); // Error opcode
-                errorBuffer.putShort((short) 4);
-                errorBuffer.put("Incorrect block number".getBytes());
-                errorBuffer.put((byte) 0); //Generate error if block within the received packet is not in order
-
-                DatagramPacket errorPacket = new DatagramPacket(errorBuffer.array(), errorBuffer.position(), socketAddress);
-                socket.send(errorPacket); //Package this error into a packet for the Client
-                return;
+                return; //Stop reading is block numbers no longer line up
             }
 
             byte[] blockData = Arrays.copyOfRange(dataPacket.getData(), 4, dataPacket.getLength());
@@ -148,7 +121,7 @@ public class UDPSocketServer extends Thread {
             fileOutputStream.flush(); //Write the data contained within the packet to the file
 
             ByteBuffer ackBuffer = ByteBuffer.allocate(4);
-            ackBuffer.putShort((short) 4); // ACK opcode
+            ackBuffer.putShort((short) 4); //Acknowledgement opcode
             ackBuffer.putShort((short) receivedBlockNumber); //Generate an acknowledgement for the data block just received
 
             DatagramPacket ackPacket = new DatagramPacket(ackBuffer.array(), ackBuffer.position(), socketAddress);
