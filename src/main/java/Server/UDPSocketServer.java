@@ -43,7 +43,7 @@ public class UDPSocketServer extends Thread {
         String fileName = stringBuilder.toString();
         requestBuffer.getShort();
 
-        File file = new File("./files/" + fileName); //Open the desired file
+        File file = new File("./src/main/java/Server/" + fileName); //Open the desired file
         if (!file.exists()) {
             ByteBuffer errorBuffer = ByteBuffer.allocate(5 + "File not found".length() + 1);
             errorBuffer.putShort((short) 5);
@@ -96,7 +96,7 @@ public class UDPSocketServer extends Thread {
         String fileName = stringBuilder.toString();
         requestBuffer.getShort();
 
-        File file = new File("./files/" + fileName);
+        File file = new File("./src/main/java/Server/" + fileName);
 
         FileOutputStream fileOutputStream = new FileOutputStream(file); //Open a FileOutputStream on the file
 
@@ -108,12 +108,12 @@ public class UDPSocketServer extends Thread {
             ByteBuffer dataBuffer = ByteBuffer.wrap(dataPacket.getData()); //Convert this back to a byteBuffer
             short opcode = dataBuffer.getShort();
             if (opcode != 3) {
-                return; //Stop reading if packet is not a data packet (opcode 3)
+                break; //Stop reading if packet is not a data packet (opcode 3)
             }
 
             int receivedBlockNumber = dataBuffer.getShort();
             if (receivedBlockNumber != blockNumber + 1) {
-                return; //Stop reading is block numbers no longer line up
+                break; //Stop reading is block numbers no longer line up
             }
 
             byte[] blockData = Arrays.copyOfRange(dataPacket.getData(), 4, dataPacket.getLength());
@@ -136,8 +136,7 @@ public class UDPSocketServer extends Thread {
         fileOutputStream.close();
     }
 
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SocketException {
         System.out.println("UDP Server");
         new UDPSocketServer().start(); //Start the UDP Server using threads
     }
